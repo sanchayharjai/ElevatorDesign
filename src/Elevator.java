@@ -56,7 +56,7 @@ public class Elevator {
     public Map<Direction, Set<Integer>> getFloorsToVisit() {
         return floorsToVisit;
     }
-    public void move(){
+    private void move(){
         while(!floorsToVisit.get(direction).isEmpty()){
             if(floorsToVisit.get(direction).remove(currentFloor)) System.out.println("Dropped at " + currentFloor);;
             if(floorsToVisit.get(direction).isEmpty()) continue;

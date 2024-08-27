@@ -19,7 +19,7 @@ public class Controller {
         externalRequests = new ArrayDeque<>();
         lock = new ReentrantLock();
     }
-    public void requestElevator(Request request){
+    private void requestElevator(Request request){
         Elevator bestElevator;
         lock.lock();
         try {
