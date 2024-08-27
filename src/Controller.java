@@ -1,11 +1,13 @@
 import java.util.*;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class Controller {
     List<Elevator> elevatorList;
-    Queue<Request> externalRequests;
+    private final BlockingQueue<Request> externalRequests;
     BestElevatorStrategy bestElevatorStrategy;
     private final Lock lock;
     private final Map<Integer, Lock> lockList;
@@ -19,7 +21,7 @@ public class Controller {
             elevatorList.add(new Elevator(100, i, l));
             lockList.put(i, l);
         }
-        externalRequests = new ArrayDeque<>();
+        externalRequests = new LinkedBlockingQueue<>();
         lock = new ReentrantLock();
     }
     private void requestElevator(Request request){
@@ -36,19 +38,13 @@ public class Controller {
 
     public void processRequest(){
         while(true){
-            List<Request> requests = new ArrayList<>();
-            lock.lock();
+            Request request = null;
             try {
-                while (!externalRequests.isEmpty()) requests.add(externalRequests.poll());
-            } finally {
-                lock.unlock();
-            }
-            requests.forEach(this::requestElevator);
-            try {
-                TimeUnit.MILLISECONDS.sleep(200);
+                request = externalRequests.take(); // Blocks until a request is available
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
+            requestElevator(request);
 //            System.out.println(Thread.currentThread().getName() + " process thread");
         }
     }
