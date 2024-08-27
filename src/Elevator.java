@@ -13,20 +13,21 @@ public class Elevator {
     private Map<Direction, Set<Integer>> floorsToVisit;
     private final Lock lock;
 
-    public Elevator(int maxCapacity, int id){
-        this(Direction.IDLE, Status.IDLE, 0, 0, maxCapacity, id);
+    public Elevator(int maxCapacity, int id, Lock lock){
+        this(Direction.IDLE, Status.IDLE, 0, 0, maxCapacity, id, lock);
     }
 
-    public Elevator(Direction direction, Status status, int currentFloor, int capacity, int maxCapacity, int id) {
+    public Elevator(Direction direction, Status status, int currentFloor, int capacity, int maxCapacity, int id, Lock lock) {
         this.direction = direction;
         this.status = status;
         this.currentFloor = currentFloor;
         this.capacity = capacity;
         this.maxCapacity = maxCapacity;
         this.floorsToVisit = new HashMap<>();
-        for(var v : Direction.values()) floorsToVisit.put(v, new HashSet<>());
+        Arrays.stream(Direction.values()).forEach(v -> floorsToVisit.put(v, new HashSet<>()));
         this.id = id;
-        this.lock = new ReentrantLock();
+        this.lock = lock;
+        GlobalConfig.getExecutor().submit(this::move);
     }
 
     public Direction getDirection() {
@@ -57,43 +58,38 @@ public class Elevator {
         return floorsToVisit;
     }
     private void move(){
-        while(!floorsToVisit.get(direction).isEmpty()){
-            if(floorsToVisit.get(direction).remove(currentFloor)) System.out.println("Dropped at " + currentFloor);;
-            if(floorsToVisit.get(direction).isEmpty()) continue;
-            System.out.println(Thread.currentThread().getName() + " Elevator : " + id + " is at floor " + currentFloor);
-            if(direction == Direction.UP){
-                currentFloor++;
-            } else if (direction == Direction.DOWN){
-                currentFloor--;
-            }
-            try {
-                TimeUnit.SECONDS.sleep(2);
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            }
-        }
-        for (var dir : Direction.values()) {
-            if(!floorsToVisit.get(dir).isEmpty()){
-                direction = dir;
-                status = Status.MOVING;
-                move();
-            }
-        }
-    }
-    public void setMove(){
-        if (status == Status.IDLE) {
-            status = Status.MOVING;
+        while (true) {
             for (var dir : Direction.values()) {
                 if(!floorsToVisit.get(dir).isEmpty()){
                     direction = dir;
                     status = Status.MOVING;
-                    move();
+                    while(!floorsToVisit.get(direction).isEmpty()){
+                        if(floorsToVisit.get(direction).remove(currentFloor)) System.out.println("Dropped at " + currentFloor);;
+                        if(floorsToVisit.get(direction).isEmpty()) continue;
+                        System.out.println(Thread.currentThread().getName() + " Elevator : " + id + " is at floor " + currentFloor);
+                        if(direction == Direction.UP){
+                            currentFloor++;
+                        } else if (direction == Direction.DOWN){
+                            currentFloor--;
+                        }
+                        try {
+                            TimeUnit.SECONDS.sleep(2);
+                        } catch (InterruptedException e) {
+                            throw new RuntimeException(e);
+                        }
+                    }
+                    direction = Direction.IDLE;
+                    status = Status.IDLE;
                 }
             }
-            status = Status.IDLE;
-            direction = Direction.IDLE;
+            try {
+                TimeUnit.MILLISECONDS.sleep(200);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
         }
     }
+
     public void addFloor(int floor){
         if(currentFloor <= floor) floorsToVisit.get(Direction.UP).add(floor);
         else floorsToVisit.get(Direction.DOWN).add(floor);

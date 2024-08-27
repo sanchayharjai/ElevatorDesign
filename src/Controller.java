@@ -1,7 +1,4 @@
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Queue;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -11,25 +8,30 @@ public class Controller {
     Queue<Request> externalRequests;
     BestElevatorStrategy bestElevatorStrategy;
     private final Lock lock;
+    private final Map<Integer, Lock> lockList;
 
     public Controller(int elevators){
         bestElevatorStrategy = new RandomElevatorStrategy();
         elevatorList = new ArrayList<>();
-        for(int i = 0; i < elevators; i++) elevatorList.add(new Elevator(100, i));
+        lockList = new HashMap<>();
+        for(int i = 0; i < elevators; i++) {
+            Lock l = new ReentrantLock();
+            elevatorList.add(new Elevator(100, i, l));
+            lockList.put(i, l);
+        }
         externalRequests = new ArrayDeque<>();
         lock = new ReentrantLock();
     }
     private void requestElevator(Request request){
         Elevator bestElevator;
-        lock.lock();
+        bestElevator = bestElevatorStrategy.getBestElevator(elevatorList);
+        lockList.get(bestElevator.getId()).lock();
         try {
-            bestElevator = bestElevatorStrategy.getBestElevator(elevatorList);
             bestElevator.addFloor(request.floor);
             System.out.println(request + " " + " added to Elevator " + bestElevator.getId());
         } finally {
-            lock.unlock();
+            lockList.get(bestElevator.getId()).unlock();
         }
-        if(bestElevator != null) GlobalConfig.getExecutor().submit(bestElevator::setMove);
     }
 
     public void processRequest(){
