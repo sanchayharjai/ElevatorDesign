@@ -1,5 +1,6 @@
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -11,9 +12,7 @@ public class Elevator {
     private int capacity;
     private final int maxCapacity;
     private Map<Direction, Set<Integer>> floorsToVisit;
-    private final Lock lock;
     private MoveStrategy moveStrategy;
-    private Object moveLock;
 
     public Elevator(int maxCapacity, int id, Lock lock){
         this(Direction.IDLE, Status.IDLE, 0, 0, maxCapacity, id, lock);
@@ -28,9 +27,7 @@ public class Elevator {
         this.floorsToVisit = new HashMap<>();
         Arrays.stream(Direction.values()).forEach(v -> floorsToVisit.put(v, new HashSet<>()));
         this.id = id;
-        this.lock = lock;
         moveStrategy = MoveStrategy.SCAN;
-        moveLock = new Object();
         GlobalConfig.getExecutor().submit(this::move);
     }
 
@@ -61,8 +58,8 @@ public class Elevator {
     public Map<Direction, Set<Integer>> getFloorsToVisit() {
         return floorsToVisit;
     }
-    private synchronized void move(){
-        while (true) {
+    private void move(){
+        while (!Thread.currentThread().isInterrupted()) {
             moveStrategy.move(this);
         }
     }
