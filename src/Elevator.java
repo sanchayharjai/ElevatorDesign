@@ -12,6 +12,7 @@ public class Elevator {
     private final int maxCapacity;
     private Map<Direction, Set<Integer>> floorsToVisit;
     private final Lock lock;
+    private MoveStrategy moveStrategy;
 
     public Elevator(int maxCapacity, int id, Lock lock){
         this(Direction.IDLE, Status.IDLE, 0, 0, maxCapacity, id, lock);
@@ -27,6 +28,7 @@ public class Elevator {
         Arrays.stream(Direction.values()).forEach(v -> floorsToVisit.put(v, new HashSet<>()));
         this.id = id;
         this.lock = lock;
+        moveStrategy = MoveStrategy.SCAN;
         GlobalConfig.getExecutor().submit(this::move);
     }
 
@@ -59,39 +61,24 @@ public class Elevator {
     }
     private void move(){
         while (true) {
-            for (var dir : Direction.values()) {
-                if(!floorsToVisit.get(dir).isEmpty()){
-                    direction = dir;
-                    status = Status.MOVING;
-                    while(!floorsToVisit.get(direction).isEmpty()){
-                        if(floorsToVisit.get(direction).remove(currentFloor)) System.out.println("Dropped at " + currentFloor);;
-                        if(floorsToVisit.get(direction).isEmpty()) continue;
-                        System.out.println(Thread.currentThread().getName() + " Elevator : " + id + " is at floor " + currentFloor);
-                        if(direction == Direction.UP){
-                            currentFloor++;
-                        } else if (direction == Direction.DOWN){
-                            currentFloor--;
-                        }
-                        try {
-                            TimeUnit.SECONDS.sleep(2);
-                        } catch (InterruptedException e) {
-                            throw new RuntimeException(e);
-                        }
-                    }
-                    direction = Direction.IDLE;
-                    status = Status.IDLE;
-                }
-            }
-            try {
-                TimeUnit.MILLISECONDS.sleep(200);
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            }
+            moveStrategy.move(this);
         }
     }
 
-    public void addFloor(int floor){
+    public synchronized void addFloor(int floor){
         if(currentFloor <= floor) floorsToVisit.get(Direction.UP).add(floor);
         else floorsToVisit.get(Direction.DOWN).add(floor);
+    }
+
+    public void setDirection(Direction direction) {
+        this.direction = direction;
+    }
+
+    public void setStatus(Status status) {
+        this.status = status;
+    }
+
+    public void setCurrentFloor(int currentFloor) {
+        this.currentFloor = currentFloor;
     }
 }

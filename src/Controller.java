@@ -10,16 +10,13 @@ public class Controller {
     private final BlockingQueue<Request> externalRequests;
     BestElevatorStrategy bestElevatorStrategy;
     private final Lock lock;
-    private final Map<Integer, Lock> lockList;
 
     public Controller(int elevators){
         bestElevatorStrategy = new RandomElevatorStrategy();
         elevatorList = new ArrayList<>();
-        lockList = new HashMap<>();
         for(int i = 0; i < elevators; i++) {
             Lock l = new ReentrantLock();
             elevatorList.add(new Elevator(100, i, l));
-            lockList.put(i, l);
         }
         externalRequests = new LinkedBlockingQueue<>();
         lock = new ReentrantLock();
@@ -27,13 +24,9 @@ public class Controller {
     private void requestElevator(Request request){
         Elevator bestElevator;
         bestElevator = bestElevatorStrategy.getBestElevator(elevatorList);
-        lockList.get(bestElevator.getId()).lock();
-        try {
-            bestElevator.addFloor(request.floor);
-            System.out.println(request + " " + " added to Elevator " + bestElevator.getId());
-        } finally {
-            lockList.get(bestElevator.getId()).unlock();
-        }
+        bestElevator.addFloor(request.floor);
+        System.out.println(request + " " + " added to Elevator " + bestElevator.getId());
+
     }
 
     public void processRequest(){
@@ -49,12 +42,7 @@ public class Controller {
         }
     }
     public void addRequest(Request request){
-        lock.lock();
-        try {
-            System.out.println(request + " added to queue");
-            externalRequests.offer(request);
-        } finally {
-            lock.unlock();
-        }
+        externalRequests.offer(request);
+
     }
 }
