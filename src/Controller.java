@@ -12,7 +12,7 @@ public class Controller {
     private final Lock lock;
 
     public Controller(int elevators){
-        bestElevatorStrategy = new RandomElevatorStrategy();
+        bestElevatorStrategy = BestElevatorStrategy.RANDOM;
         elevatorList = new ArrayList<>();
         for(int i = 0; i < elevators; i++) {
             Lock l = new ReentrantLock();
@@ -37,6 +37,7 @@ public class Controller {
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
+            System.out.println("got request " + request);
             requestElevator(request);
 //            System.out.println(Thread.currentThread().getName() + " process thread");
         }

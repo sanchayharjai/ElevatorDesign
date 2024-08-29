@@ -13,6 +13,7 @@ public class Elevator {
     private Map<Direction, Set<Integer>> floorsToVisit;
     private final Lock lock;
     private MoveStrategy moveStrategy;
+    private Object moveLock;
 
     public Elevator(int maxCapacity, int id, Lock lock){
         this(Direction.IDLE, Status.IDLE, 0, 0, maxCapacity, id, lock);
@@ -29,6 +30,7 @@ public class Elevator {
         this.id = id;
         this.lock = lock;
         moveStrategy = MoveStrategy.SCAN;
+        moveLock = new Object();
         GlobalConfig.getExecutor().submit(this::move);
     }
 
@@ -61,19 +63,13 @@ public class Elevator {
     }
     private synchronized void move(){
         while (true) {
-            try {
-                wait();
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            }
             moveStrategy.move(this);
         }
     }
 
-    public synchronized void addFloor(int floor){
+    public void addFloor(int floor){
         if(currentFloor <= floor) floorsToVisit.get(Direction.UP).add(floor);
         else floorsToVisit.get(Direction.DOWN).add(floor);
-        notifyAll();
     }
 
     public void setDirection(Direction direction) {

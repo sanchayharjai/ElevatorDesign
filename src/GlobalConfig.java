@@ -12,6 +12,6 @@ public class GlobalConfig {
     }
 
     static {
-        executor = Executors.newFixedThreadPool(5);
+        executor = Executors.newFixedThreadPool(10);
     }
 }
