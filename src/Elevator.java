@@ -59,8 +59,13 @@ public class Elevator {
     public Map<Direction, Set<Integer>> getFloorsToVisit() {
         return floorsToVisit;
     }
-    private void move(){
+    private synchronized void move(){
         while (true) {
+            try {
+                wait();
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
             moveStrategy.move(this);
         }
     }
@@ -68,6 +73,7 @@ public class Elevator {
     public synchronized void addFloor(int floor){
         if(currentFloor <= floor) floorsToVisit.get(Direction.UP).add(floor);
         else floorsToVisit.get(Direction.DOWN).add(floor);
+        notifyAll();
     }
 
     public void setDirection(Direction direction) {
